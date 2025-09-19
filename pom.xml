@@ -15,7 +15,7 @@
 
     <groupId>com.javaproject</groupId>
     <artifactId>database_service_project</artifactId>
-    <version>1.0.0-RELEASE</version>
+    <version>2.0.0-RELEASE</version>
     <name>database_service_project</name>
     <description>Spring Boot project for database services</description>
     <packaging>jar</packaging>
