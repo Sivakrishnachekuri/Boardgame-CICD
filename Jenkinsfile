@@ -32,7 +32,6 @@ pipeline {
         stage('Check Quality Gate') {
             steps {
                 script {
-                    // Do not abort the pipeline, just check status
                     waitForQualityGate abortPipeline: false
                 }
             }
@@ -46,12 +45,12 @@ pipeline {
             }
         }
 
-        stage('Docker Image Build') {
+        stage('Docker Image Build & Push') {
             steps {
                 script {
                     withDockerRegistry(credentialsId: 'docker-cicd2', toolName: 'docker') {
                         sh "docker build -t sivakrishna72/boardgame-cicd:1.0.0 ."
-                        sh "docker push sivakrishna72/boardgame-cicd:1.0.0 "
+                        sh "docker push sivakrishna72/boardgame-cicd:1.0.0"
                     }
                 }
             }
@@ -60,6 +59,20 @@ pipeline {
         stage('Docker Image Scan') {
             steps {
                 sh 'trivy image --format table -o trivy-image-report.html sivakrishna72/boardgame-cicd:1.0.0'
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                withKubeConfig(
+                    credentialsId: 'k8s-cred',
+                    namespace: 'boardgame',
+                    serverUrl: 'https://172.31.36.136:6443'
+                ) {
+                    sh "kubectl apply -f deployment-service.yaml"
+                    sh "kubectl get pods -n boardgame"
+                    sh "kubectl get svc -n boardgame"
+                }
             }
         }
     }
