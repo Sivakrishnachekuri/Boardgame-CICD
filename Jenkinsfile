@@ -49,20 +49,20 @@ pipeline {
             steps {
                 script {
                     withDockerRegistry(credentialsId: 'docker-cicd2', toolName: 'docker') {
-                        sh "docker build -t sivakrishna72/boardgame-cicd:1.0.0 ."
-                        sh "docker push sivakrishna72/boardgame-cicd:1.0.0"
+                        sh "docker build -t sivakrishna72/boardgame-cicd:2.0.0 ."
+                        sh "docker push sivakrishna72/boardgame-cicd:2.0.0"
                     }
                 }
             }
         }
 
-        stage('Docker Image Scan') {
+        stage('Sscan docker image') {
             steps {
-                sh 'trivy image --format table -o trivy-image-report.html sivakrishna72/boardgame-cicd:1.0.0'
+                sh 'trivy image --format table -o trivy-image-report.html sivakrishna72/boardgame-cicd:2.0.0'
             }
         }
 
-        stage('Deploy to Kubernetes') {
+        stage('Deploy to Kubernetes and verify the status') {
             steps {
                 withKubeConfig(
                     credentialsId: 'k8s-cred',
