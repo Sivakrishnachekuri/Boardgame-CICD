@@ -1,32 +1,75 @@
 pipeline {
     agent any
-    
+
     tools {
-        maven 'maven3.6'
-        jdk 'jdk17'
+        jdk 'jdk11'
+        maven 'maven3'
     }
 
     stages {
-        
-        stage('Compile') {
+        stage('Git Checkout') {
             steps {
-             sh 'mvn compile'
+                git branch: 'main',
+                    credentialsId: 'git-cred',
+                    url: 'https://github.com/Sivakrishnachekuri/Boardgame-CICD.git'
             }
         }
-        stage('test') {
+
+        stage('Trivy File System Scan') {
             steps {
-                sh 'mvn test'
+                sh 'trivy fs --format table -o trivy-fs-report.html .'
             }
         }
-        stage('Package') {
+
+        stage('SonarQube Analysis') {
             steps {
-               sh 'mvn package'
+                withSonarQubeEnv('sonar-scanner') {
+                    sh 'mvn sonar:sonar -Dsonar.projectKey=BoardGame-cicd -Dsonar.projectName=BoardGame-cicd'
+                }
             }
         }
-        stage('Hello') {
+
+        stage('Check Quality Gate') {
             steps {
-                echo 'Hello World'
+                script {
+                    // Do not abort the pipeline, just check status
+                    waitForQualityGate abortPipeline: false
+                }
             }
+        }
+
+        stage('Build & Deploy') {
+            steps {
+                withMaven(globalMavenSettingsConfig: 'global-settingsmaven', jdk: 'jdk11', traceability: true) {
+                    sh "mvn clean package deploy"
+                }
+            }
+        }
+
+        stage('Docker Image Build') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker-cicd2', toolName: 'docker') {
+                        sh "docker build -t sivakrishna72/boardgame-cicd:1.0.0 ."
+                        sh "docker push sivakrishna72/boardgame-cicd:1.0.0 "
+                    }
+                }
+            }
+        }
+
+        stage('Docker Image Scan') {
+            steps {
+                sh 'trivy image --format table -o trivy-image-report.html sivakrishna72/boardgame-cicd:1.0.0'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Build, scan, QA, and deploy completed successfully!'
+        }
+        failure {
+            echo '❌ Something failed. Check logs.'
         }
     }
 }
