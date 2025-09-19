@@ -26,7 +26,7 @@
     </properties>
 
     <dependencies>
-        <!-- Spring Boot Starter Dependencies -->
+        <!-- Spring Boot Starters -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -115,7 +115,7 @@
         </plugins>
     </build>
 
-    <!-- ✅ Nexus repository configuration -->
+    <!-- Nexus repository configuration -->
     <distributionManagement>
         <repository>
             <id>maven-releases</id>
