@@ -78,11 +78,56 @@ pipeline {
     }
 
     post {
-        success {
-            echo '✅ Build, scan, QA, and deploy completed successfully!'
-        }
-        failure {
-            echo '❌ Something failed. Check logs.'
+        always {
+            script {
+                def jobName = env.JOB_NAME
+                def buildNumber = env.BUILD_NUMBER
+                def pipelineStatus = currentBuild.result ?: 'UNKNOWN'
+                def bannerColor = pipelineStatus.toUpperCase() == 'SUCCESS' ? 'green' : 'red'
+
+                // Read Trivy reports
+                def fsReport = readFile('trivy-fs-report.html')
+                def imageReport = readFile('trivy-image-report.html')
+                def fsVulnFound = fsReport.contains('VULNERABILITY')
+                def imageVulnFound = imageReport.contains('VULNERABILITY')
+
+                def vulnMessage = ""
+                if(fsVulnFound || imageVulnFound) {
+                    vulnMessage = "<p style='color:red;'><b>⚠️ Vulnerabilities found in Trivy scan!</b></p>"
+                } else {
+                    vulnMessage = "<p style='color:green;'><b>✅ No vulnerabilities found in Trivy scans.</b></p>"
+                }
+
+                def body = """
+                    <html>
+                    <body>
+                    <div style="border: 4px solid ${bannerColor}; padding: 10px;">
+                        <h2>${jobName} - Build ${buildNumber}</h2>
+                        <div style="background-color: ${bannerColor}; padding: 10px;">
+                            <h3 style="color: white;">Pipeline Status: ${pipelineStatus.toUpperCase()}</h3>
+                        </div>
+                        ${vulnMessage}
+                        <p>Check the <a href='${BUILD_URL}'>console output</a>.</p>
+                        <p>Attached Trivy Reports:</p>
+                        <ul>
+                            <li>File System Scan: <b>trivy-fs-report.html</b></li>
+                            <li>Docker Image Scan: <b>trivy-image-report.html</b></li>
+                        </ul>
+                    </div>
+                    </body>
+                    </html>
+                """
+
+                emailext(
+                    subject: "${jobName} - Build ${buildNumber} - ${pipelineStatus.toUpperCase()}",
+                    body: body,
+                    to: 'chekuri382@gmail.com',
+                    from: 'jenkins@example.com',
+                    replyTo: 'jenkins@example.com',
+                    mimeType: 'text/html',
+                    attachmentsPattern: 'trivy-fs-report.html, trivy-image-report.html'
+                )
+            }
         }
     }
 }
